@@ -1,0 +1,26 @@
+# Build output
+/target/
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+
+# Local Maven caches created by developers or verification tooling
+.m2/
+.maven-repository/
+.stabilization-m2/
+.stabilization-maven-settings.xml
+
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

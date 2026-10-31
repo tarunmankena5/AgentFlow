@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Build and run tests (Testcontainers uses the runner's Docker)
+        run: mvn -B verify
+        env:
+          JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+          DB_PASSWORD: ci
+      - name: Build Docker image
+        run: docker build -t agentflow:ci .

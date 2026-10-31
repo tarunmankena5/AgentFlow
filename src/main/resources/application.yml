@@ -1,0 +1,109 @@
+spring:
+  application:
+    name: agentflow
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/agentflow}
+    username: ${DB_USERNAME:agentflow}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # schema is owned by Flyway, never by Hibernate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: ${agentflow.kafka.consumer-group}
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+    listener:
+      ack-mode: manual
+  ai:
+    retry:
+      max-attempts: 1   # Agent invocation enforces its own bounded timeout and failure policy.
+    model:
+      chat: ${AI_CHAT_MODEL:none}
+    openai:
+      # Spring AI's OpenAI speech auto-configuration requires a non-empty key even
+      # when chat is disabled. This inert placeholder permits local startup only.
+      api-key: ${OPENAI_API_KEY:disabled}
+      timeout: ${AI_PROVIDER_TIMEOUT:30s}
+      max-retries: ${AI_PROVIDER_MAX_RETRIES:0}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+          temperature: 0.2
+    vectorstore:
+      pgvector:
+        initialize-schema: false  # created by Flyway
+        dimensions: ${EMBEDDING_DIMENSIONS:1536}
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+
+agentflow:
+  ai:
+    input-usd-per-1k-tokens: ${AI_INPUT_USD_PER_1K_TOKENS:0}
+    output-usd-per-1k-tokens: ${AI_OUTPUT_USD_PER_1K_TOKENS:0}
+  tools:
+    http-allowed-hosts: ${HTTP_TOOL_ALLOWED_HOSTS:}
+    max-response-bytes: 1048576
+  security:
+    jwt-secret: ${JWT_SECRET}      # required, >= 32 bytes; no default on purpose
+    access-token-ttl: 15m
+    refresh-token-ttl: 7d
+    issuer: agentflow
+  execution:
+    max-steps-hard-limit: 50
+    default-step-timeout: 120s
+    approval-default-deadline: 48h
+    recovery-sweep-interval: 60s
+  kafka:
+    execution-topic: agentflow.execution.events
+    execution-dlq-topic: agentflow.execution.events.dlq
+    consumer-group: agentflow-execution-engine
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    level: "%5p [corr=%X{correlationId:-}]"
+  structured:
+    format:
+      console: ecs
+
+server:
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
